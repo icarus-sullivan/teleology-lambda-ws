@@ -11,27 +11,6 @@ const request = (options) =>
     req.end();
   });
 
-const detectHeader = (data) =>
-  data && data instanceof Buffer
-    ? { 'Content-Type': 'application/octet-stream' }
-    : { 'Content-Type': 'application/json' };
-
-const sanitizeBody = (data) =>
-  data && data instanceof Buffer ? data : JSON.stringify(data);
-
-export const createPublisher = ({ stage, domainName, connectionId }) => (
-  data,
-) =>
-  request(
-    aws4.sign({
-      path: `/${stage}/%40connections/${encodeURIComponent(connectionId)}`,
-      headers: detectHeader(data),
-      body: sanitizeBody(data),
-      host: domainName,
-      method: 'POST',
-    }),
-  );
-
 const extractData = ({ isBase64Encoded = false, body = '{}' }) => {
   try {
     const debuff = Buffer.from(body, isBase64Encoded ? 'base64' : undefined);
@@ -47,6 +26,39 @@ const extractData = ({ isBase64Encoded = false, body = '{}' }) => {
 
   return {
     data: body,
+  };
+};
+
+export const createPublisher = ({ stage, domainName, connectionId }) => async (
+  data,
+) =>
+  request(
+    aws4.sign({
+      path: `/${stage}/%40connections/${encodeURIComponent(connectionId)}`,
+      headers:
+        data && data instanceof Buffer
+          ? { 'Content-Type': 'application/octet-stream' }
+          : { 'Content-Type': 'application/json' },
+      body: data && data instanceof Buffer ? data : JSON.stringify(data),
+      host: domainName,
+      method: 'POST',
+    }),
+  );
+
+export const extractConnectionData = (opt = {}) => {
+  if (opt.requestContext) {
+    const rc = opt.requestContext;
+    return {
+      stage: rc.stage,
+      domainName: rc.domainName,
+      connectionId: rc.connectionId,
+    };
+  }
+
+  return {
+    stage: opt.stage,
+    domainName: opt.domainName,
+    connectionId: opt.connectionId,
   };
 };
 

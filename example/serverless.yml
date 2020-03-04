@@ -1,0 +1,28 @@
+service: teleology-ws-example
+
+plugins:
+  - serverless-webpack
+
+provider:
+  name: aws
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  runtime: nodejs10.x
+  logRetentionInDays: 1
+  timeout: 20
+  memorySize: 1536
+
+package:
+  individually: true
+
+functions:
+  test:
+    handler: src/index.default
+    memorySize: 3008
+    events:
+      - websocket:
+          route: $connect
+      - websocket:
+          route: $disconnect
+      - websocket:
+          route: $default
