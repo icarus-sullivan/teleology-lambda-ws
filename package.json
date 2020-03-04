@@ -1,6 +1,6 @@
 {
   "name": "@teleology/lambda-ws",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Lambda Websocket wrapper, creating a message publisher and auto inflation of incoming data",
   "main": "lib/index.js",
   "files": [

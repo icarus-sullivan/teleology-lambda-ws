@@ -33,7 +33,7 @@ functions:
           route: $default
 ```
 
-##### Usage
+##### Wrapper
 
 ```javascript
 // pre-ES6
@@ -42,34 +42,53 @@ functions:
 // ES6
 import lambdaWs from '@teleology/lambda-ws';
 
-const handler = async (enhancedEvent) => {
-  const { action, connectionId } = enhancedEvent.requestContext;
-  switch (action) {
-    case 'connect': {
-      const token = enhancedEvent.headers.Authorization.replace('Bearer ', '');
-      // handle authorization - throw if Unauthorized
-      break;
-    }
-    case 'disconnect': {
-      console.log('Closing connection to', connectionId);
-      break;
-    }
-    case 'message': {
-      const { publish } = enhancedEvent;
-      await publish({ message: 'hello from @teleology/lambda-ws' });
-      break;
-    }
-    default: {
-      // no-op
-      break;
-    }
-  }
+const actionMap = {
+  connect: async (event) => {},
+  disconnect: async (event) => {},
+  message: async ({ data, publish }) => {
+    // console log - echo back data
+    console.log('received', data);
+    await publish(data);
+  },
 };
 
-export default lambdaWs(handler);
+export default lambdaWs(async (event) => {
+  const { action } = event;
+
+  const actionHandler = actionMap[action];
+  if (actionHandler) {
+    return actionHandler(event);
+  }
+});
 ```
 Be aware, you do not need to return anything within the lambda, the library will automatically return a valid response. However for a custom response your handler should return a JSON object with a statusCode. 
 
+##### Connection Details
+
+Connection data is needed to re-establish a publish request and can be used outside of the context of the lambda (as long as the connection is still open).
+
+```javascript
+import lambdaWs, { extractConnectionData } from '@teleology/lambda-ws';
+
+export default lambdaWs(async (event) => {
+  // Save connectionData for use later
+  const connectionData = extractConnectionData(event);
+})
+```
+
+##### Connection Details
+
+If you have stored your connection details somewhere else, you can publish data to a client outside of the websocket lambda.
+
+```javascript
+import { createPublisher } from '@teleology/lambda-ws';
+
+const publishToClient = async (connectionData, message) => {
+  const publish = createPublisher(connectionData);
+
+  return publish(message);
+}
+```
 
 #### EnhancedEvent 
 ```

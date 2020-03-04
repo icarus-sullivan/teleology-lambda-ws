@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "deploy": "npx serverless deploy",
-    "remove": "npx serverless remove"
+    "delete": "npx serverless remove"
   },
   "devDependencies": {
     "@babel/core": "^7.4.5",
