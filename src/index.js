@@ -1,84 +1,110 @@
-import https from 'https';
-import aws4 from 'aws4';
+/* eslint-disable consistent-return */
+import EventEmmiter from 'events';
+import { settle } from './utils';
+import lambdaWs, { extractConnectionData, createPublisher } from './core';
 
-const request = (options) =>
-  new Promise((resolve) => {
-    const req = https.request(options, ({ statusCode }) => {
-      resolve(statusCode === 200);
-    });
-    req.on('error', () => resolve(false));
-    req.write(options.body);
-    req.end();
-  });
+const E = new EventEmmiter();
 
-const extractData = ({ isBase64Encoded = false, body = '{}' }) => {
-  try {
-    const debuff = Buffer.from(body, isBase64Encoded ? 'base64' : undefined);
-    const o = JSON.parse(debuff);
-    if (o && typeof o === 'object') {
+const OP_CODES = {
+  SUBSCRIBE: 'subscribe',
+  UNSUBSCRIBE: 'unsubscribe',
+};
+
+const AWS_EVENTS = {
+  CONNECT: 'connect',
+  DISCONNECT: 'disconnect',
+  MESSAGE: 'message',
+};
+
+const PROTOCOL = {
+  ...OP_CODES,
+  ...AWS_EVENTS,
+};
+
+let configuration = {
+  // client operations
+  saveClient: async (client) => {},
+  removeClient: async (client) => {},
+
+  // subscriptions
+  subscribe: async (client, event) => {},
+  unsubscribe: async (client, event) => {},
+  getSubscribers: async (event) => [],
+};
+
+const configure = (options) => {
+  configuration = {
+    ...configuration,
+    ...options,
+  };
+};
+
+const emitOne = async (client, type, payload) =>
+  createPublisher(client)({ type, payload });
+
+const emitImpl = async ({ type, payload }) => {
+  const clients = await configuration.getSubscribers(type);
+  await settle(clients.map((client) => emitOne(client, type, payload)));
+};
+
+const emit = async (type, payload) => emitImpl({ type, payload });
+
+const on = E.on.bind(E);
+
+const createHandler = () =>
+  lambdaWs(async (event) => {
+    const { action, data } = event;
+    const client = { ...extractConnectionData(event), subscriptions: [] };
+
+    try {
+      if (action === PROTOCOL.CONNECT) {
+        const listeners = E.listeners(PROTOCOL.CONNECT);
+        await settle(listeners.map((fn) => fn(event)));
+
+        // only save the client if the connect callback did not fail
+        await configuration.saveClient(client);
+      }
+
+      if (action === PROTOCOL.DISCONNECT) {
+        // try to remove the client before the callback is called
+        await configuration.removeClient(client);
+
+        const listeners = E.listeners(PROTOCOL.DISCONNECT);
+        await settle(listeners.map((fn) => fn(event)));
+      }
+
+      if (action === PROTOCOL.MESSAGE) {
+        const { op, type, payload } = data;
+        if (op === PROTOCOL.SUBSCRIBE) {
+          await configuration.subscribe(client, type);
+          return;
+        }
+
+        if (op === PROTOCOL.UNSUBSCRIBE) {
+          await configuration.unsubscribe(client, type);
+          return;
+        }
+
+        if (!op) {
+          const listeners = E.listeners(type);
+          await settle(listeners.map((fn) => fn(client, payload)));
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      await configuration.removeClient(client);
       return {
-        data: o,
+        statusCode: '500',
+        body: JSON.stringify({
+          message: e && e.message ? e.message : e,
+        }),
       };
     }
-  } catch (e) {
-    // do nothing
-  }
+  });
 
-  return {
-    data: body,
-  };
-};
-
-export const createPublisher = ({ stage, domainName, connectionId }) => async (
-  data,
-) =>
-  request(
-    aws4.sign({
-      path: `/${stage}/%40connections/${encodeURIComponent(connectionId)}`,
-      headers:
-        data && data instanceof Buffer
-          ? { 'Content-Type': 'application/octet-stream' }
-          : { 'Content-Type': 'application/json' },
-      body: data && data instanceof Buffer ? data : JSON.stringify(data),
-      host: domainName,
-      method: 'POST',
-    }),
-  );
-
-export const extractConnectionData = (opt = {}) => {
-  if (opt.requestContext) {
-    const rc = opt.requestContext;
-    return {
-      stage: rc.stage,
-      domainName: rc.domainName,
-      connectionId: rc.connectionId,
-    };
-  }
-
-  return {
-    stage: opt.stage,
-    domainName: opt.domainName,
-    connectionId: opt.connectionId,
-  };
-};
-
-export default (fn) => async (event) => {
-  const action = event.requestContext.eventType.toLowerCase();
-  const enhancedEvent = {
-    ...event,
-    ...extractData(event),
-    publish: createPublisher(event.requestContext),
-    action,
-  };
-
-  if (action !== 'message') {
-    delete enhancedEvent.publish;
-  }
-
-  const response = await fn(enhancedEvent);
-  return (
-    response || {
-      statusCode: '200',
-    }
-  );
+module.exports = {
+  on,
+  emit,
+  configure,
+  createHandler,
 };

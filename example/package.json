@@ -28,6 +28,7 @@
     "webpack-node-externals": "^1.7.2"
   },
   "dependencies": {
-    "@teleology/lambda-ws": "../"
+    "@teleology/lambda-ws": "../",
+    "mongoose": "^5.9.3"
   }
 }

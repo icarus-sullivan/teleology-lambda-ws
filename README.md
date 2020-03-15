@@ -15,7 +15,7 @@ yarn add @teleology/lambda-ws
 
 ## Usage
 
-##### Servereless Project
+### Servereless Project
 
 Configure your function to accept all routes/actions. 
 
@@ -33,7 +33,8 @@ functions:
           route: $default
 ```
 
-##### Wrapper
+### Wrapper
+Be aware, you do not need to return anything within the lambda, the library will automatically return a valid response. However for a custom response your handler should return a JSON object with a statusCode. 
 
 ```javascript
 // pre-ES6
@@ -61,9 +62,8 @@ export default lambdaWs(async (event) => {
   }
 });
 ```
-Be aware, you do not need to return anything within the lambda, the library will automatically return a valid response. However for a custom response your handler should return a JSON object with a statusCode. 
 
-##### Connection Details
+### Connection Details
 
 Connection data is needed to re-establish a publish request and can be used outside of the context of the lambda (as long as the connection is still open).
 
@@ -76,7 +76,7 @@ export default lambdaWs(async (event) => {
 })
 ```
 
-##### Connection Details
+### Connection Details
 
 If you have stored your connection details somewhere else, you can publish data to a client outside of the websocket lambda.
 
@@ -90,7 +90,7 @@ const publishToClient = async (connectionData, message) => {
 }
 ```
 
-#### EnhancedEvent 
+### EnhancedEvent 
 ```
 type Publisher = Function(data: any);
 

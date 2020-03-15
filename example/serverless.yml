@@ -19,6 +19,8 @@ functions:
   test:
     handler: src/index.default
     memorySize: 3008
+    environment:
+      MONGO_URI: mongodb+srv://conner:P4sssrWv@connections-3i8cd.mongodb.net/connections?retryWrites=true&w=majority
     events:
       - websocket:
           route: $connect
