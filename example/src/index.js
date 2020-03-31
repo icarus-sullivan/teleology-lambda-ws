@@ -1,12 +1,7 @@
-import ws from '@teleology/lambda-ws';
-
-import * as configuration from './ws/configuration';
-
-ws.configure(configuration);
+import ws from './ws';
 
 ws.on('connect', (event) => {
   console.log('connect', event);
-  // throw new Error('no');
 });
 
 ws.on('disconnect', (event) => {

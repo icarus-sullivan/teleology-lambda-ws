@@ -666,6 +666,13 @@
     lodash "^4.17.13"
     to-fast-properties "^2.0.0"
 
+"@teleology/lambda-wscore@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@teleology/lambda-wscore/-/lambda-wscore-1.0.0.tgz#f941d6dc0d0313fdc6997af7e9feae97e0ace755"
+  integrity sha512-pelyiEwNYgSGBDfX+rYq8ELSELyN/s5z+h3RA0Dsm9+azKObf8D9MW5Zzr2cFY90zw5N+LazVAPKirIUppqHcQ==
+  dependencies:
+    aws4 "^1.9.0"
+
 abbrev@1:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/abbrev/-/abbrev-1.1.1.tgz#f8f2c887ad10bf67f634f005b6987fed3179aac8"

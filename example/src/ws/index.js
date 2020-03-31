@@ -1,8 +1,9 @@
+import ws from '@teleology/lambda-ws';
 import mongo from '../mongo';
 
 const mongoCaller = mongo({});
 
-export const saveClient = async (client) => {
+const saveClient = async (client) => {
   await mongoCaller(async ({ models }) => {
     return models.client
       .findOneAndUpdate({ connectionId: client.connectionId }, client, {
@@ -12,7 +13,8 @@ export const saveClient = async (client) => {
       .exec();
   });
 };
-export const subscribe = async (client, event) => {
+
+const subscribe = async (client, event) => {
   await mongoCaller(async ({ models }) => {
     return models.client
       .findOneAndUpdate(
@@ -27,10 +29,10 @@ export const subscribe = async (client, event) => {
       .exec();
   });
 };
-export const unsubscribe = async (client, event) => {
+const unsubscribe = async (client, event) => {
   // do nothing
 };
-export const removeClient = async (client) => {
+const removeClient = async (client) => {
   await mongoCaller(async ({ models }) => {
     return models.client
       .findOneAndRemove({ connectionId: client.connectionId })
@@ -38,7 +40,7 @@ export const removeClient = async (client) => {
       .exec();
   });
 };
-export const getSubscribers = async (event) => {
+const getSubscribers = async (event) => {
   return mongoCaller(async ({ models }) => {
     return models.client
       .find({ subscriptions: { $in: [event] } })
@@ -46,3 +48,11 @@ export const getSubscribers = async (event) => {
       .exec();
   });
 };
+
+export default ws({
+  saveClient,
+  removeClient,
+  subscribe,
+  unsubscribe,
+  getSubscribers,
+});
